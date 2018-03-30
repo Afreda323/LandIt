@@ -16,6 +16,9 @@ public class Rocket : MonoBehaviour {
     [SerializeField] ParticleSystem winParticle;
     [SerializeField] ParticleSystem loseParticle;
 
+    //Configurable transition time
+    [SerializeField] float transitionTime = 2f;
+
     // Possible player states
     enum State {Winning, Losing, Alive}
     State playerState = State.Alive;
@@ -24,6 +27,8 @@ public class Rocket : MonoBehaviour {
     bool isThrusting;
     AudioSource audioSource;
     Rigidbody rocketBody;
+
+    bool disableCollision = false;
 
 	// Use this for initialization
 	void Start () 
@@ -41,6 +46,11 @@ public class Rocket : MonoBehaviour {
             HandleRotate();
             HandleThrust();
         }
+        if(Debug.isDebugBuild)
+        {
+            HandleDebug();
+        }
+
 	}
 
     private void HandleRotate()
@@ -86,7 +96,7 @@ public class Rocket : MonoBehaviour {
 
 	private void OnCollisionEnter(Collision collision)
 	{
-        if (playerState != State.Alive) { return; }
+        if (playerState != State.Alive || disableCollision) { return; }
 
         switch (collision.gameObject.tag) 
         {
@@ -108,7 +118,7 @@ public class Rocket : MonoBehaviour {
         audioSource.Stop();
         audioSource.PlayOneShot(winSound);
         winParticle.Play();
-        Invoke("LoadNextLevel", 1f);
+        Invoke("LoadNextLevel", transitionTime);
 
     }
 
@@ -118,7 +128,7 @@ public class Rocket : MonoBehaviour {
         audioSource.Stop();
         audioSource.PlayOneShot(loseSound);
         loseParticle.Play();
-        Invoke("LoadFirstLevel", 1f);
+        Invoke("LoadFirstLevel", transitionTime);
     }
 
     private void LoadFirstLevel()
@@ -128,8 +138,23 @@ public class Rocket : MonoBehaviour {
 
     private void LoadNextLevel () 
     {
-        SceneManager.LoadScene(1);
+        int count = SceneManager.sceneCountInBuildSettings;
+        int nextScene = SceneManager.GetActiveScene().buildIndex + 1;
+
+        if(nextScene > count - 1 ) {
+            SceneManager.LoadScene(0);
+        } else {
+            SceneManager.LoadScene(nextScene);
+        }
     }
 
-
+    private void HandleDebug ()
+    {
+        if(Input.GetKey(KeyCode.L)) 
+        {
+            LoadNextLevel();
+        } else if (Input.GetKey(KeyCode.C)) {
+            disableCollision = !disableCollision;
+        }
+    }
 }
